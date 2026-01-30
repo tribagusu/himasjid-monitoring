@@ -31,7 +31,7 @@ export async function getAppVersion(): Promise<VersionInfo> {
 
 export async function setAppVersion(
   version: string,
-  override: string | null
+  override: string | null,
 ): Promise<boolean> {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase
@@ -46,7 +46,7 @@ export async function setAppVersion(
 }
 
 export async function broadcastVersionUpdate(
-  version: string
+  version: string,
 ): Promise<boolean> {
   try {
     const supabase = getSupabaseAdmin();
@@ -92,7 +92,7 @@ export async function getClientVersionStats(): Promise<ClientVersionStats[]> {
     .select("version, client_type")
     .gte(
       "last_seen_at",
-      new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     );
 
   if (error || !data) return [];
@@ -142,7 +142,7 @@ export async function getUserMetrics(): Promise<UserMetrics> {
 
   const supabase = getSupabaseAdmin();
   const { data: users, error } = await supabase
-    .from("users")
+    .from("masjids")
     .select("id, tier, updated_at, is_active");
 
   if (error || !users) {
@@ -159,13 +159,13 @@ export async function getUserMetrics(): Promise<UserMetrics> {
   const typedUsers = users as UserRow[];
   const total = typedUsers.length;
   const active24h = typedUsers.filter(
-    (u) => u.updated_at && u.updated_at >= h24
+    (u) => u.updated_at && u.updated_at >= h24,
   ).length;
   const active7d = typedUsers.filter(
-    (u) => u.updated_at && u.updated_at >= d7
+    (u) => u.updated_at && u.updated_at >= d7,
   ).length;
   const active30d = typedUsers.filter(
-    (u) => u.updated_at && u.updated_at >= d30
+    (u) => u.updated_at && u.updated_at >= d30,
   ).length;
   const freeTier = typedUsers.filter((u) => u.tier === "free").length;
   const premiumTier = typedUsers.filter((u) => u.tier === "premium").length;
@@ -209,8 +209,8 @@ export async function getUsageStats(): Promise<UsageStats> {
   let totalStorageBytes = 0;
 
   try {
-    // Get all user IDs from database to iterate their folders
-    const { data: users } = await supabase.from("users").select("id");
+    // Get all masjid IDs from database to iterate their folders
+    const { data: users } = await supabase.from("masjids").select("id");
 
     if (users) {
       // For each user, count files in their images subfolder
@@ -225,16 +225,16 @@ export async function getUsageStats(): Promise<UsageStats> {
           totalImages += files.length;
           totalStorageBytes += files.reduce(
             (sum, f) => sum + (f.metadata?.size || 0),
-            0
+            0,
           );
         }
       }
     }
   } catch (error) {
     console.error("Failed to count images from storage:", error);
-    // Fallback to user table aggregation
+    // Fallback to masjid table aggregation
     const { data: users } = await supabase
-      .from("users")
+      .from("masjids")
       .select("storage_usage");
 
     if (users) {
@@ -278,7 +278,7 @@ interface SecurityEventRow {
 }
 
 export async function getRecentSecurityEvents(
-  limit = 10
+  limit = 10,
 ): Promise<SecurityEvent[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
