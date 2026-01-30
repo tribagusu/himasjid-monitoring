@@ -12,7 +12,7 @@ export function UserMetricsCard({ metrics }: UserMetricsCardProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium">
           <Users className="w-4 h-4 inline mr-2" />
-          Users
+          Masjids
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

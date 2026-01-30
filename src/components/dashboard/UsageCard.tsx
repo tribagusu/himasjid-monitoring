@@ -20,7 +20,7 @@ export function UsageCard({ stats }: UsageCardProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium">
           <BarChart3 className="w-4 h-4 inline mr-2" />
-          Usage (All Users)
+          Usage (All Masjids)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
