@@ -13,7 +13,7 @@ import {
 } from "@/lib/queries";
 
 export async function loginAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<{ error?: string }> {
   const email = formData.get("email") as string;
   const secret = formData.get("secret") as string;
@@ -47,7 +47,7 @@ export async function logoutAction(): Promise<void> {
 export async function setAppVersionAction(
   version: string,
   override: string | null,
-  shouldBroadcast: boolean
+  shouldBroadcast: boolean,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const success = await setVersion(version, override);
@@ -69,7 +69,7 @@ export async function setAppVersionAction(
 }
 
 export async function broadcastVersionAction(
-  version: string
+  version: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const success = await broadcast(version);
@@ -77,5 +77,20 @@ export async function broadcastVersionAction(
   } catch (error) {
     console.error("broadcastVersionAction error:", error);
     return { success: false, error: "An error occurred" };
+  }
+}
+
+// ============================================================================
+// REALTIME MONITORING ACTIONS
+// ============================================================================
+
+import { detectIdleMasjids } from "@/lib/queries";
+
+export async function detectIdleMasjidsAction(): Promise<number> {
+  try {
+    return await detectIdleMasjids(30);
+  } catch (error) {
+    console.error("detectIdleMasjidsAction error:", error);
+    return 0;
   }
 }

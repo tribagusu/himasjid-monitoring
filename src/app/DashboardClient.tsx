@@ -8,6 +8,7 @@ import {
   UserMetricsCard,
   UsageCard,
   SecurityEventsCard,
+  RealtimeHealthCard,
 } from "@/components/dashboard";
 import type { DashboardData } from "@/lib/queries";
 import { LogOut, RefreshCw } from "lucide-react";
@@ -76,12 +77,14 @@ export function DashboardClient({ data, userEmail }: DashboardClientProps) {
             currentVersion={effectiveVersion}
           />
 
-          {/* Row 2: Users + Usage */}
           <UserMetricsCard metrics={data.userMetrics} />
           <UsageCard stats={data.usageStats} />
+
+          {/* Row 3: Realtime Health (spans 2 columns) */}
+          <RealtimeHealthCard metrics={data.realtimeMetrics} />
         </div>
 
-        {/* Row 3: Security Events (full width) */}
+        {/* Row 4: Security Events (full width) */}
         <div className="mt-4">
           <SecurityEventsCard events={data.securityEvents} />
         </div>

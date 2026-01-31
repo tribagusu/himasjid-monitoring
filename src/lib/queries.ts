@@ -304,6 +304,146 @@ export async function getRecentSecurityEvents(
 }
 
 // ============================================================================
+// REALTIME METRICS QUERIES
+// ============================================================================
+
+export interface RealtimeConnection {
+  id: string;
+  masjidId: string;
+  masjidName: string | null;
+  clientType: "display" | "admin";
+  channelName: string;
+  connectedAt: string;
+  lastHeartbeatAt: string;
+  disconnectedAt: string | null;
+}
+
+export interface RealtimeMetrics {
+  activeConnections: number;
+  maxConnections: number; // 500 Supabase limit
+  utilizationPercent: number;
+  idleMasjids: number; // No activity for 30+ days
+  connectedMasjids: number;
+  disconnectedMasjids: number;
+  recentConnections: RealtimeConnection[];
+  alertLevel: "normal" | "warning" | "critical"; // based on utilization
+}
+
+interface RealtimeConnectionRow {
+  id: string;
+  masjid_id: string;
+  client_type: string;
+  channel_name: string;
+  connected_at: string;
+  last_heartbeat_at: string;
+  disconnected_at: string | null;
+  masjids: { masjid_name: string | null } | null;
+}
+
+interface MasjidStatusRow {
+  realtime_status: string | null;
+}
+
+export async function getRealtimeMetrics(): Promise<RealtimeMetrics> {
+  const MAX_CONNECTIONS = 500;
+  const supabase = getSupabaseAdmin();
+
+  // Get masjid counts by realtime_status
+  const { data: masjids } = await supabase
+    .from("masjids")
+    .select("realtime_status");
+
+  const typedMasjids = (masjids as MasjidStatusRow[]) || [];
+  const connectedMasjids = typedMasjids.filter(
+    (m) => m.realtime_status === "connected",
+  ).length;
+  const idleMasjids = typedMasjids.filter(
+    (m) => m.realtime_status === "idle",
+  ).length;
+  const disconnectedMasjids = typedMasjids.filter(
+    (m) => m.realtime_status === "disconnected" || m.realtime_status === null,
+  ).length;
+
+  // Get active connections (not disconnected) from realtime_connections table
+  const { count: activeCount } = await supabase
+    .from("realtime_connections")
+    .select("*", { count: "exact", head: true })
+    .is("disconnected_at", null);
+
+  const activeConnectionCount = activeCount || 0;
+  const utilizationPercent = Math.round(
+    (activeConnectionCount / MAX_CONNECTIONS) * 100,
+  );
+
+  // Determine alert level
+  let alertLevel: "normal" | "warning" | "critical" = "normal";
+  if (utilizationPercent >= 90) {
+    alertLevel = "critical";
+  } else if (utilizationPercent >= 80) {
+    alertLevel = "warning";
+  }
+
+  // Get recent connections (last 10)
+  const { data: recentData } = await supabase
+    .from("realtime_connections")
+    .select(
+      `
+      id,
+      masjid_id,
+      client_type,
+      channel_name,
+      connected_at,
+      last_heartbeat_at,
+      disconnected_at,
+      masjids (masjid_name)
+    `,
+    )
+    .order("connected_at", { ascending: false })
+    .limit(10);
+
+  const recentConnections: RealtimeConnection[] = (
+    (recentData as unknown as RealtimeConnectionRow[]) || []
+  ).map((r) => ({
+    id: r.id,
+    masjidId: r.masjid_id,
+    masjidName: r.masjids?.masjid_name || null,
+    clientType: r.client_type as "display" | "admin",
+    channelName: r.channel_name,
+    connectedAt: r.connected_at,
+    lastHeartbeatAt: r.last_heartbeat_at,
+    disconnectedAt: r.disconnected_at,
+  }));
+
+  return {
+    activeConnections: activeConnectionCount,
+    maxConnections: MAX_CONNECTIONS,
+    utilizationPercent,
+    idleMasjids,
+    connectedMasjids,
+    disconnectedMasjids,
+    recentConnections,
+    alertLevel,
+  };
+}
+
+// Trigger idle detection manually (calls the detect_idle_masjids function)
+export async function detectIdleMasjids(
+  idleDays: number = 30,
+): Promise<number> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.rpc("detect_idle_masjids", {
+    p_idle_days: idleDays,
+  });
+
+  if (error) {
+    console.error("Failed to detect idle masjids:", error);
+    return 0;
+  }
+
+  return data || 0;
+}
+
+// ============================================================================
 // DASHBOARD DATA (combined)
 // ============================================================================
 
@@ -313,17 +453,32 @@ export interface DashboardData {
   userMetrics: UserMetrics;
   usageStats: UsageStats;
   securityEvents: SecurityEvent[];
+  realtimeMetrics: RealtimeMetrics;
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
-  const [version, clientStats, userMetrics, usageStats, securityEvents] =
-    await Promise.all([
-      getAppVersion(),
-      getClientVersionStats(),
-      getUserMetrics(),
-      getUsageStats(),
-      getRecentSecurityEvents(),
-    ]);
+  const [
+    version,
+    clientStats,
+    userMetrics,
+    usageStats,
+    securityEvents,
+    realtimeMetrics,
+  ] = await Promise.all([
+    getAppVersion(),
+    getClientVersionStats(),
+    getUserMetrics(),
+    getUsageStats(),
+    getRecentSecurityEvents(),
+    getRealtimeMetrics(),
+  ]);
 
-  return { version, clientStats, userMetrics, usageStats, securityEvents };
+  return {
+    version,
+    clientStats,
+    userMetrics,
+    usageStats,
+    securityEvents,
+    realtimeMetrics,
+  };
 }
