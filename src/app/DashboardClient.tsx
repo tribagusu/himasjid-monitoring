@@ -79,13 +79,11 @@ export function DashboardClient({ data, userEmail }: DashboardClientProps) {
 
           <UserMetricsCard metrics={data.userMetrics} />
           <UsageCard stats={data.usageStats} />
-
-          {/* Row 3: Realtime Health (spans 2 columns) */}
-          <RealtimeHealthCard metrics={data.realtimeMetrics} />
         </div>
 
-        {/* Row 4: Security Events (full width) */}
-        <div className="mt-4">
+        {/* Row 3: Realtime Health + Security Events (side by side on desktop) */}
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <RealtimeHealthCard metrics={data.realtimeMetrics} />
           <SecurityEventsCard events={data.securityEvents} />
         </div>
 

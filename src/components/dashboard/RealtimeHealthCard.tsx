@@ -65,7 +65,7 @@ export function RealtimeHealthCard({ metrics }: RealtimeHealthCardProps) {
   };
 
   return (
-    <Card className="col-span-2">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center justify-between">
           <div className="flex items-center gap-2">
