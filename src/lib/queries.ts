@@ -346,6 +346,7 @@ interface MasjidStatusRow {
 
 export async function getRealtimeMetrics(): Promise<RealtimeMetrics> {
   const MAX_CONNECTIONS = 500;
+  const HEARTBEAT_FRESH_MS = 5 * 60 * 1000;
   const supabase = getSupabaseAdmin();
 
   // Get masjid counts by realtime_status
@@ -364,11 +365,15 @@ export async function getRealtimeMetrics(): Promise<RealtimeMetrics> {
     (m) => m.realtime_status === "disconnected" || m.realtime_status === null,
   ).length;
 
-  // Get active connections (not disconnected) from realtime_connections table
+  // Get active connections from realtime_connections table.
+  // Require a recent heartbeat so stale rows (clients that crashed without
+  // writing disconnected_at) don't inflate the count.
+  const freshSince = new Date(Date.now() - HEARTBEAT_FRESH_MS).toISOString();
   const { count: activeCount } = await supabase
     .from("realtime_connections")
     .select("*", { count: "exact", head: true })
-    .is("disconnected_at", null);
+    .is("disconnected_at", null)
+    .gte("last_heartbeat_at", freshSince);
 
   const activeConnectionCount = activeCount || 0;
   const utilizationPercent = Math.round(
