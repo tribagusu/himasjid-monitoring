@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { loginAction } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,21 +15,24 @@ import {
 } from "@/components/ui/card";
 import { AlertCircle, Shield } from "lucide-react";
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? "Redirecting to dashboard..." : "Access Dashboard"}
+    </Button>
+  );
+}
+
 export default function LoginPage() {
   const [error, setError] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(formData: FormData) {
-    setIsLoading(true);
     setError("");
-
     const result = await loginAction(formData);
-
     if (result?.error) {
       setError(result.error);
-      setIsLoading(false);
     }
-    // If successful, the action will redirect
   }
 
   return (
@@ -60,7 +64,6 @@ export default function LoginPage() {
                 type="email"
                 placeholder="admin@himasjid.app"
                 required
-                disabled={isLoading}
               />
             </div>
 
@@ -72,13 +75,10 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••••••"
                 required
-                disabled={isLoading}
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Verifying..." : "Access Dashboard"}
-            </Button>
+            <SubmitButton />
           </form>
         </CardContent>
       </Card>
